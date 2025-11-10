@@ -1,0 +1,5 @@
+{
+  "name": "Finan-lytics: AI Financial Assistant",
+  "description": "An AI-powered financial assistant that analyzes your monthly bank statements from a PDF upload. It provides insights into your spending habits with categorized expenses and generates interactive charts to visualize your financial health.",
+  "requestFramePermissions": []
+}
