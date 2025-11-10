@@ -7,6 +7,7 @@ import { SpendingBreakdownChart } from './SpendingBreakdownChart';
 import { TransactionsTable } from './TransactionsTable';
 import type { AnalysisData, Summary, View, UserProfile, SpendingAlert, Transaction } from '../types';
 import { analyzeFinancialStatement } from '../services/geminiService';
+import { loadAnalysisData, saveAnalysisData, updateTransaction as updateTransactionDB, deleteAllUserData } from '../services/dataService';
 import { INITIAL_DATA, CATEGORY_COLORS } from '../constants';
 import { TransactionsPage } from './TransactionsPage';
 import { ReportsPage } from './ReportsPage';
@@ -37,6 +38,26 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
         setProfileSettings(user);
     }, [user]);
 
+    // Carregar dados do Supabase ao montar o componente
+    useEffect(() => {
+        const loadUserData = async () => {
+            try {
+                setIsLoading(true);
+                const data = await loadAnalysisData();
+                if (data) {
+                    setAnalysisData(data);
+                    console.log('✅ Dados carregados do Supabase:', data);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadUserData();
+    }, []);
+
     useEffect(() => {
         if (!analysisData?.transactions) {
             setCategories([]);
@@ -47,7 +68,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
         setCategories(Array.from(allCats).sort());
     }, [analysisData]);
 
-    const handleUpdateTransaction = useCallback((updatedTx: Transaction) => {
+    const handleUpdateTransaction = useCallback(async (updatedTx: Transaction) => {
+        // Atualizar no estado local
         setAnalysisData(prevData => {
             if (!prevData) return null;
             const txIndex = prevData.transactions.findIndex(t => t.id === updatedTx.id);
@@ -58,6 +80,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
 
             return { ...prevData, transactions: newTransactions };
         });
+        
+        // Salvar no Supabase
+        try {
+            await updateTransactionDB(updatedTx);
+            console.log('✅ Transação atualizada no Supabase');
+        } catch (error) {
+            console.error('❌ Erro ao atualizar transação:', error);
+        }
     }, []);
 
     const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,6 +206,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
             }
 
             setAnalysisData(cumulativeData);
+            
+            // Salvar no Supabase
+            if (cumulativeData) {
+                try {
+                    await saveAnalysisData(cumulativeData);
+                    console.log('✅ Dados salvos no Supabase');
+                } catch (error) {
+                    console.error('❌ Erro ao salvar dados:', error);
+                    setError('Dados analisados mas não foi possível salvar no banco. Tente novamente.');
+                }
+            }
         } catch (err) {
             console.error(err);
             setError('Falha ao analisar o documento. Tente um PDF diferente ou verifique o console para mais detalhes.');
@@ -188,11 +229,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
         }
     }, []);
     
-    const handleClearData = useCallback(() => {
-        setAnalysisData(null);
-        setError(null);
-        setSelectedMonth('all');
-        setCurrentView('dashboard');
+    const handleClearData = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            await deleteAllUserData();
+            setAnalysisData(null);
+            setError(null);
+            setSelectedMonth('all');
+            setSelectedCategory('all');
+            setCurrentView('dashboard');
+            console.log('✅ Dados limpos do Supabase');
+        } catch (error) {
+            console.error('❌ Erro ao limpar dados:', error);
+            setError('Erro ao limpar dados do banco.');
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
     
     const triggerFileUpload = () => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { UserProfile, SpendingAlert } from '../types';
+import { updateUserProfile } from '../services/dataService';
 
 interface SettingsPageProps {
     profile: UserProfile;
@@ -69,10 +70,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ profile, onProfileCh
         }
     };
 
-    const handleProfileSave = (e: React.FormEvent) => {
+    const handleProfileSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        onProfileChange(localProfile);
-        alert('Perfil salvo com sucesso!');
+        try {
+            const success = await updateUserProfile(localProfile);
+            if (success) {
+                onProfileChange(localProfile);
+                alert('✅ Perfil salvo com sucesso!');
+            } else {
+                alert('❌ Erro ao salvar perfil. Tente novamente.');
+            }
+        } catch (error) {
+            console.error('Erro ao salvar perfil:', error);
+            alert('❌ Erro ao salvar perfil. Verifique o console.');
+        }
     };
     
     const handleClearDataConfirm = () => {
