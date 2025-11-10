@@ -15,11 +15,13 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 export const analyzeFinancialStatement = async (file: File): Promise<AnalysisData> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set");
+    const apiKey = import.meta.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+        throw new Error("GEMINI_API_KEY não está configurado nas variáveis de ambiente");
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const base64Pdf = await fileToBase64(file);
 
     const pdfPart = {
