@@ -15,10 +15,10 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 export const analyzeFinancialStatement = async (file: File): Promise<AnalysisData> => {
-    const apiKey = import.meta.env.GEMINI_API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     
     if (!apiKey) {
-        throw new Error("GEMINI_API_KEY não está configurado nas variáveis de ambiente");
+        throw new Error("VITE_GEMINI_API_KEY não está configurado nas variáveis de ambiente");
     }
 
     const ai = new GoogleGenAI({ apiKey });

@@ -7,7 +7,7 @@ import { SpendingBreakdownChart } from './SpendingBreakdownChart';
 import { TransactionsTable } from './TransactionsTable';
 import type { AnalysisData, Summary, View, UserProfile, SpendingAlert, Transaction } from '../types';
 import { analyzeFinancialStatement } from '../services/geminiService';
-import { loadAnalysisData, saveAnalysisData, updateTransaction as updateTransactionDB, deleteAllUserData } from '../services/dataService';
+import { loadAnalysisData, saveAnalysisData, updateTransaction as updateTransactionDB, deleteAllUserData, getUserProfile } from '../services/dataService';
 import { INITIAL_DATA, CATEGORY_COLORS } from '../constants';
 import { TransactionsPage } from './TransactionsPage';
 import { ReportsPage } from './ReportsPage';
@@ -43,6 +43,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
         const loadUserData = async () => {
             try {
                 setIsLoading(true);
+                
+                // Carregar perfil do usuário
+                const profileData = await getUserProfile();
+                if (profileData) {
+                    setProfileSettings(profileData);
+                    console.log('✅ Perfil carregado do Supabase:', profileData);
+                }
+                
+                // Carregar dados de análise
                 const data = await loadAnalysisData();
                 if (data) {
                     setAnalysisData(data);
@@ -227,7 +236,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
                 fileInputRef.current.value = '';
             }
         }
-    }, []);
+    }, [analysisData]);
     
     const handleClearData = useCallback(async () => {
         try {
@@ -356,7 +365,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
                 accept=".pdf"
                 multiple
             />
-            <SideNav currentView={currentView} onNavigate={setCurrentView} userProfile={user} onLogout={onLogout} />
+            <SideNav currentView={currentView} onNavigate={setCurrentView} userProfile={profileSettings} onLogout={onLogout} />
             <main className="flex-1 overflow-y-auto relative">
                 {isLoading && (
                     <div className="absolute inset-0 bg-background-dark/80 flex flex-col items-center justify-center z-50">
@@ -404,7 +413,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
                         months={availableMonths}
                         selectedMonth={selectedMonth}
                         onMonthChange={setSelectedMonth} 
-                        userName={user.name}
+                        userName={profileSettings.name}
                       />
 
                       {error && (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { UserProfile, SpendingAlert } from '../types';
-import { updateUserProfile } from '../services/dataService';
+import { updateUserProfile, getUserProfile } from '../services/dataService';
 
 interface SettingsPageProps {
     profile: UserProfile;
@@ -75,7 +75,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ profile, onProfileCh
         try {
             const success = await updateUserProfile(localProfile);
             if (success) {
-                onProfileChange(localProfile);
+                // Recarregar o perfil do banco de dados
+                const updatedProfile = await getUserProfile();
+                if (updatedProfile) {
+                    onProfileChange(updatedProfile);
+                    setLocalProfile(updatedProfile);
+                } else {
+                    onProfileChange(localProfile);
+                }
                 alert('✅ Perfil salvo com sucesso!');
             } else {
                 alert('❌ Erro ao salvar perfil. Tente novamente.');

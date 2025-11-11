@@ -6,7 +6,12 @@ import type { AnalysisData, Transaction, UserProfile } from '../types';
 export const getUserProfile = async (): Promise<UserProfile | null> => {
     try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
+        if (!user) {
+            console.log('❌ Nenhum usuário autenticado');
+            return null;
+        }
+
+        console.log('📝 Buscando perfil para usuário:', user.id);
 
         const { data, error } = await supabase
             .from('profiles')
@@ -14,15 +19,24 @@ export const getUserProfile = async (): Promise<UserProfile | null> => {
             .eq('id', user.id)
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('❌ Erro ao buscar perfil:', error);
+            throw error;
+        }
 
-        return {
-            name: data.name || user.email || '',
-            email: data.email || user.email || '',
-            imageUrl: data.avatar_url || undefined,
+        console.log('✅ Perfil encontrado no banco:', data);
+
+        const profile = {
+            name: data?.name || user.email || '',
+            email: data?.email || user.email || '',
+            imageUrl: data?.avatar_url || undefined,
         };
+
+        console.log('✅ Perfil retornado:', profile);
+
+        return profile;
     } catch (error) {
-        console.error('Erro ao buscar perfil:', error);
+        console.error('❌ Erro ao buscar perfil:', error);
         return null;
     }
 };
@@ -30,22 +44,43 @@ export const getUserProfile = async (): Promise<UserProfile | null> => {
 export const updateUserProfile = async (profile: Partial<UserProfile>): Promise<boolean> => {
     try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return false;
+        if (!user) {
+            console.error('❌ Usuário não autenticado');
+            return false;
+        }
 
-        const { error } = await supabase
+        console.log('📝 Salvando perfil para usuário:', user.id);
+        console.log('📝 Dados do perfil:', profile);
+
+        const profileData = {
+            id: user.id,
+            name: profile.name,
+            email: profile.email || user.email,
+            avatar_url: profile.imageUrl,
+        };
+
+        console.log('📝 Objeto sendo enviado:', profileData);
+
+        const { data, error } = await supabase
             .from('profiles')
-            .upsert({
-                id: user.id,
-                name: profile.name,
-                email: profile.email,
-                avatar_url: profile.imageUrl,
-                updated_at: new Date().toISOString(),
-            });
+            .upsert(profileData, {
+                onConflict: 'id',
+                ignoreDuplicates: false
+            })
+            .select();
 
-        if (error) throw error;
+        if (error) {
+            console.error('❌ Erro do Supabase:', error);
+            console.error('❌ Código do erro:', error.code);
+            console.error('❌ Mensagem:', error.message);
+            console.error('❌ Detalhes:', error.details);
+            throw error;
+        }
+        
+        console.log('✅ Perfil salvo com sucesso!', data);
         return true;
     } catch (error) {
-        console.error('Erro ao atualizar perfil:', error);
+        console.error('❌ Erro ao salvar perfil:', error);
         return false;
     }
 };
