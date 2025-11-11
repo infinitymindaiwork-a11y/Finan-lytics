@@ -61,13 +61,52 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ profile, onProfileCh
 
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setLocalProfile(prev => ({ ...prev, imageUrl: reader.result as string }));
-            };
-            reader.readAsDataURL(file);
-        }
+        if (!file) return;
+
+        // Redimensiona/comprime a imagem no cliente para evitar imagens muito grandes
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+            try {
+                const maxSize = 512; // px: mantém dentro de limites (ex.: APIs que limitam 2000px)
+                let { width, height } = img;
+                let newWidth = width;
+                let newHeight = height;
+
+                if (width > height && width > maxSize) {
+                    newWidth = maxSize;
+                    newHeight = Math.round((height * maxSize) / width);
+                } else if (height >= width && height > maxSize) {
+                    newHeight = maxSize;
+                    newWidth = Math.round((width * maxSize) / height);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) throw new Error('Canvas não suportado');
+                ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+                const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                const quality = 0.85;
+                const dataUrl = canvas.toDataURL(mime, quality);
+                setLocalProfile(prev => ({ ...prev, imageUrl: dataUrl }));
+            } catch (err) {
+                // Fallback: usa o arquivo original
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setLocalProfile(prev => ({ ...prev, imageUrl: reader.result as string }));
+                };
+                reader.readAsDataURL(file);
+            } finally {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+        };
+        img.src = objectUrl;
     };
 
     const handleProfileSave = async (e: React.FormEvent) => {
