@@ -7,7 +7,7 @@ import { SpendingBreakdownChart } from './SpendingBreakdownChart';
 import { TransactionsTable } from './TransactionsTable';
 import type { AnalysisData, Summary, View, UserProfile, SpendingAlert, Transaction } from '../types';
 import { analyzeFinancialStatement } from '../services/geminiService';
-import { loadAnalysisData, saveAnalysisData, updateTransaction as updateTransactionDB, deleteAllUserData, getUserProfile } from '../services/dataService';
+import { loadAnalysisData, saveAnalysisData, updateTransaction as updateTransactionDB, deleteAllUserData, getUserProfile, updateUserProfile } from '../services/dataService';
 import { INITIAL_DATA, CATEGORY_COLORS } from '../constants';
 import { TransactionsPage } from './TransactionsPage';
 import { ReportsPage } from './ReportsPage';
@@ -49,6 +49,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ user, onLogout, theme, o
                 if (profileData) {
                     setProfileSettings(profileData);
                     console.log('✅ Perfil carregado do Supabase:', profileData);
+                } else {
+                    // Se não houver perfil, criar um com os dados do user
+                    console.log('⚠️ Perfil não encontrado, criando perfil inicial...');
+                    const initialProfile = {
+                        name: user.name,
+                        email: user.email,
+                        imageUrl: user.imageUrl
+                    };
+                    const created = await updateUserProfile(initialProfile);
+                    if (created) {
+                        setProfileSettings(initialProfile);
+                        console.log('✅ Perfil inicial criado:', initialProfile);
+                    }
                 }
                 
                 // Carregar dados de análise
