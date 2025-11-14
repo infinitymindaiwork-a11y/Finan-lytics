@@ -153,6 +153,18 @@ ORDER BY table_name;
 
 ---
 
+## 🖼️ Storage (Avatares)
+
+1. No painel do Supabase, clique em Storage → Create a new bucket.
+  - Nome do bucket: `avatars` (ou outro que preferir). 
+  - Marque como **public** para facilitar o acesso público às imagens de avatar (ou mantenha privado e gere URLs assinadas, se preferir).
+2. Depois de criado, verifique que você consegue enviar um arquivo manualmente no painel de Storage → Buckets → avatars.
+3. Nosso `dataService.updateUserProfile` fará upload do `dataURL` para o bucket `avatars` e vai salvar o `avatar_url` com a URL pública retornada pelo Supabase.
+
+Observação de segurança: se você preferir que os avatares fiquem privados, mantenha o bucket privado e gere URLs temporárias com `createSignedUrl` (requer a chave do serviço no backend ou funções edge).
+
+---
+
 ## Como Executar:
 
 1. **Acesse o SQL Editor do Supabase:**

@@ -52,22 +52,69 @@ export const updateUserProfile = async (profile: Partial<UserProfile>): Promise<
         console.log('📝 Salvando perfil para usuário:', user.id);
         console.log('📝 Dados do perfil:', profile);
 
-        const profileData = {
+        const profileData: any = {
             id: user.id,
             name: profile.name,
             email: profile.email || user.email,
-            avatar_url: profile.imageUrl,
         };
+
+        // Se a imagem for um dataURL (upload local), subimos para o bucket 'avatars' e usamos a URL pública
+        if (profile.imageUrl && profile.imageUrl.startsWith('data:')) {
+            try {
+                console.log('🖼️ Uploading avatar to storage...');
+                // Converte dataURL em blob
+                const res = await fetch(profile.imageUrl);
+                const blob = await res.blob();
+
+                // define extensão a partir do MIME
+                const mime = blob.type || 'image/jpeg';
+                const ext = mime.split('/')[1] || 'jpg';
+                const filePath = `avatars/${user.id}-${Date.now()}.${ext}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(filePath, blob, { cacheControl: '3600', upsert: true });
+
+                if (uploadError) {
+                    console.error('❌ Falha ao enviar avatar para Storage:', uploadError);
+                } else {
+                    const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+                    profileData.avatar_url = publicData.publicUrl;
+                    console.log('✅ Avatar enviado. Public URL:', publicData.publicUrl);
+                }
+            } catch (err) {
+                console.error('❌ Erro durante upload do avatar:', err);
+            }
+        } else if (profile.imageUrl) {
+            // Se já é uma URL, apenas usa
+            profileData.avatar_url = profile.imageUrl;
+        }
 
         console.log('📝 Objeto sendo enviado:', profileData);
 
-        const { data, error } = await supabase
+        // Força update se já existe, evita race com trigger de criação automática
+        const { data: existing, error: fetchError } = await supabase
             .from('profiles')
-            .upsert(profileData, {
-                onConflict: 'id',
-                ignoreDuplicates: false
-            })
-            .select();
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (fetchError) {
+            console.warn('⚠️ Falha ao verificar existência do perfil, tentando upsert direto', fetchError);
+        }
+
+        let data; let error;
+        if (existing) {
+            ({ error } = await supabase
+                .from('profiles')
+                .update({ name: profileData.name, email: profileData.email, avatar_url: profileData.avatar_url })
+                .eq('id', user.id));
+            data = [{ id: user.id }];
+        } else {
+            ({ data, error } = await supabase
+                .from('profiles')
+                .insert(profileData));
+        }
 
         if (error) {
             console.error('❌ Erro do Supabase:', error);
