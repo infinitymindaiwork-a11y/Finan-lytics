@@ -9,20 +9,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  const [message, setMessage] = useState<string | null>(null);
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setMessage(null);
 
     try {
-      if (mode === 'signup') {
+      if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setMessage('✅ Email de recuperação enviado! Verifique sua caixa de entrada.');
+      } else if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
-        alert('Verifique seu email para confirmar o cadastro!');
+        setMessage('✅ Verifique seu email para confirmar o cadastro!');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -32,7 +40,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         if (onLoginSuccess) onLoginSuccess();
       }
     } catch (error: any) {
-      alert(error.message || 'Erro ao fazer login');
+      setMessage('❌ ' + (error.message || 'Erro ao processar solicitação'));
     } finally {
       setLoading(false);
     }
@@ -83,29 +91,53 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             required
             className="w-full px-4 py-3 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-card-dark text-text-light dark:text-text-dark"
           />
-          <input
-            type="password"
-            placeholder="Sua senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full px-4 py-3 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-card-dark text-text-light dark:text-text-dark"
-          />
+          {mode !== 'forgot' && (
+            <input
+              type="password"
+              placeholder="Sua senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full px-4 py-3 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-card-dark text-text-light dark:text-text-dark"
+            />
+          )}
+          
+          {message && (
+            <p className={`text-sm ${message.startsWith('✅') ? 'text-green-500' : 'text-red-500'}`}>
+              {message}
+            </p>
+          )}
+          
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-primary text-white font-semibold py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {loading ? 'Aguarde...' : mode === 'signin' ? 'Entrar' : 'Criar Conta'}
+            {loading ? 'Aguarde...' : mode === 'signin' ? 'Entrar' : mode === 'signup' ? 'Criar Conta' : 'Enviar Email de Recuperação'}
           </button>
-          <button
-            type="button"
-            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-            className="text-sm text-primary hover:underline"
-          >
-            {mode === 'signin' ? 'Não tem conta? Criar uma' : 'Já tem conta? Entrar'}
-          </button>
+          
+          <div className="flex flex-col gap-2">
+            {mode === 'signin' && (
+              <button
+                type="button"
+                onClick={() => { setMode('forgot'); setMessage(null); }}
+                className="text-sm text-primary hover:underline"
+              >
+                Esqueci minha senha
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => { 
+                setMode(mode === 'signin' ? 'signup' : 'signin'); 
+                setMessage(null); 
+              }}
+              className="text-sm text-primary hover:underline"
+            >
+              {mode === 'forgot' ? 'Voltar para o login' : mode === 'signin' ? 'Não tem conta? Criar uma' : 'Já tem conta? Entrar'}
+            </button>
+          </div>
         </form>
 
         <div className="relative mb-4">
