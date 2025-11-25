@@ -112,15 +112,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ profile, onProfileCh
     const handleProfileSave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            // Otimista: atualiza UI imediatamente
+            onProfileChange(localProfile);
+
             const success = await updateUserProfile(localProfile);
             if (success) {
-                // Recarregar o perfil do banco de dados
+                // Recarregar o perfil do banco de dados (fonte de verdade)
                 const updatedProfile = await getUserProfile();
                 if (updatedProfile) {
                     onProfileChange(updatedProfile);
                     setLocalProfile(updatedProfile);
-                } else {
-                    onProfileChange(localProfile);
                 }
                 alert('✅ Perfil salvo com sucesso!');
             } else {

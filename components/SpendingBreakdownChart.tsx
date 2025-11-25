@@ -103,7 +103,7 @@ export const SpendingBreakdownChart: React.FC<SpendingBreakdownChartProps> = ({ 
                                     border: '1px solid var(--border-light, #EAEFF4)',
                                     borderRadius: '0.5rem'
                                 }}
-                                className="dark:bg-card-dark dark:border-border-dark"
+                                wrapperClassName="dark:bg-card-dark dark:border-border-dark"
                              />
                         </PieChart>
                     </ResponsiveContainer>
